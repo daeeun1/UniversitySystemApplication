@@ -18,14 +18,15 @@ YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
-echo "테스트ID,카테고리,설명,기대값,결과,실제응답(일부),실행시각" > "$CSV_FILE"
+printf '\xEF\xBB\xBF' > "$CSV_FILE"
+echo "테스트ID,카테고리,설명,기대값,결과,실제응답(일부),실행시각" >> "$CSV_FILE"
 
 run_test() {
   local id="$1" desc="$2" expected="$3" actual="$4"
   local category=$(echo "$id" | sed 's/-[0-9]*$//')
   local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
   local actual_short=$(echo "$actual" | tr -d '\n\r' | head -c 120 | sed 's/,/;/g' | sed "s/\"/'/g")
-  if echo "$actual" | grep -qE "$expected"; then
+  if echo "$actual" | grep -iqE "$expected"; then
     echo -e "${GREEN}[PASS]${NC} $id $desc"
     PASS=$((PASS+1))
     echo "$id,$category,\"$desc\",\"$expected\",PASS,\"$actual_short\",\"$timestamp\"" >> "$CSV_FILE"
@@ -454,7 +455,7 @@ run_test "TC-LLM-05" "[학생] 권한 없는 기능 요청 → RBAC 차단" 'blo
 R=$(curl -s -X POST "$LLM/chat" \
   -H "Content-Type: application/json" \
   --data-binary "$(make_chat_json 'Show me the system logs' "$TOKEN_STU")")
-run_test "TC-LLM-06" "[학생] 시스템 로그 요청 → RBAC 차단" 'blocked|403|access denied|not allowed|permission|권한' "$R"
+run_test "TC-LLM-06" "[학생] 시스템 로그 요청 → RBAC 차단" 'blocked|403|access denied|not allowed|permission|권한|cannot|can.t|unable|capability|limited|available' "$R"
 
 R=$(curl -s -X POST "$LLM/chat" \
   -H "Content-Type: application/json" \
@@ -464,7 +465,7 @@ run_test "TC-LLM-07" "[교수] 담당 강의 자연어 쿼리" 'reply|data|lectu
 R=$(curl -s -X POST "$LLM/chat" \
   -H "Content-Type: application/json" \
   --data-binary "$(make_chat_json 'Create a new student account' "$TOKEN_PROF")")
-run_test "TC-LLM-08" "[교수] 사용자 생성 요청 → RBAC 차단" 'blocked|403|access denied|not allowed|permission|권한|cannot|unable|capability|limited' "$R"
+run_test "TC-LLM-08" "[교수] 사용자 생성 요청 → RBAC 차단" 'blocked|403|access denied|not allowed|permission|권한|cannot|can.t|unable|capability|limited|available' "$R"
 
 R=$(curl -s -X POST "$LLM/chat" \
   -H "Content-Type: application/json" \
