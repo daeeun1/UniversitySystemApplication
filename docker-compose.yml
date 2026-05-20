@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: university-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: university_db
+      MYSQL_USER: university_user
+      MYSQL_PASSWORD: university_pass
+    ports:
+      - "13306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./db/mysql.cnf:/etc/mysql/conf.d/charset.cnf
+    networks:
+      - university-network
+    healthcheck:
+      test: ["CMD", "mysql", "-h", "localhost", "-u", "university_user", "-puniversity_pass", "-e", "SELECT 1 FROM university_db.roles LIMIT 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  backend:
+    build: ./backend
+    container_name: university-backend
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/university_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
+      SPRING_DATASOURCE_USERNAME: university_user
+      SPRING_DATASOURCE_PASSWORD: university_pass
+      JWT_SECRET: your-256-bit-secret-key-for-jwt-token-signing
+      LLM_GATEWAY_URL: http://llm-gateway:8001
+    ports:
+      - "18080:8080"
+    restart: on-failure
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - university-network
+
+  llm-gateway:
+    build: ./llm-gateway
+    container_name: university-llm-gateway
+    environment:
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      BACKEND_URL: http://backend:8080
+    ports:
+      - "18001:8001"
+    networks:
+      - university-network
+
+  frontend:
+    build: ./frontend
+    container_name: university-frontend
+    environment:
+      REACT_APP_BACKEND_URL: http://localhost:18080
+      REACT_APP_LLM_GATEWAY_URL: http://localhost:18001
+    ports:
+      - "13000:3000"
+    depends_on:
+      - backend
+      - llm-gateway
+    networks:
+      - university-network
+
+networks:
+  university-network:
+    driver: bridge
+
+volumes:
+  mysql_data:

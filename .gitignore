@@ -1,0 +1,22 @@
+# 환경변수 (API 키 등 민감 정보)
+.env
+*.env
+
+# 빌드 산출물
+backend/target/
+frontend/node_modules/
+frontend/build/
+llm-gateway/__pycache__/
+llm-gateway/**/__pycache__/
+llm-gateway/*.pyc
+
+# Docker 볼륨
+mysql_data/
+
+# 테스트 결과 CSV
+test_results_*.csv
+
+# IDE
+.idea/
+.vscode/
+*.iml
